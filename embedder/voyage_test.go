@@ -437,3 +437,23 @@ func TestNewFromConfig_VoyageRequiresModel(t *testing.T) {
 		t.Errorf("embedder dimensions %d differ from config dimensions %d", emb.Dimensions(), cfg.Embedder.GetDimensions())
 	}
 }
+
+func TestParseVoyageError_RecognizesBatchLimits(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		body   string
+		want   bool
+	}{
+		{"token cap with code", 400, `{"detail":"Request to model 'voyage-4-large' failed. The max allowed tokens per submitted batch is 120000. Your batch has 205712 tokens after truncation.","error_code":"TOO_MANY_TOKENS_IN_BATCH"}`, true},
+		{"token cap detail only", 400, `{"detail":"The max allowed tokens per submitted batch is 120000."}`, true},
+		{"input count", 400, `{"detail":"The batch size limit is 1000. Your batch size is 1001."}`, true},
+		{"other 400", 400, `{"detail":"Model nope is not supported."}`, false},
+		{"not a 400", 500, `{"detail":"The batch size limit is 1000."}`, false},
+	}
+	for _, tt := range tests {
+		if got := parseVoyageError(tt.status, []byte(tt.body)).batchTooLarge; got != tt.want {
+			t.Errorf("%s: batchTooLarge = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

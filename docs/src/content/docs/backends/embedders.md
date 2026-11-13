@@ -20,7 +20,7 @@ An embedder turns each code chunk (and each search query) into a vector. This pa
 How to choose:
 
 - **Keep code on your machine:** use `ollama` or `lmstudio`.
-- **Large repository on a cloud API:** consider `openai`. It is the only provider that sends batches in parallel and retries on rate limits.
+- **Large repository on a cloud API:** consider `openai`. It is the only provider that sends batches in parallel.
 - **One key for many models:** use `openrouter` or `requesty`.
 - **Code-specific or long-context embeddings:** use `voyage` (for example `voyage-code-4`).
 

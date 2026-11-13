@@ -507,7 +507,9 @@ func parseVoyageError(status int, body []byte) *voyageAPIError {
 		status:  status,
 		message: msg,
 		batchTooLarge: status == http.StatusBadRequest &&
-			(code == "TOO_MANY_TOKENS_IN_BATCH" || strings.Contains(msg, "batch size limit")),
+			(code == "TOO_MANY_TOKENS_IN_BATCH" ||
+				strings.Contains(msg, "max allowed tokens per submitted batch") ||
+				strings.Contains(msg, "batch size limit")),
 	}
 }
 

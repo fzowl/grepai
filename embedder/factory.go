@@ -111,6 +111,23 @@ func NewFromConfig(cfg *config.Config) (Embedder, error) {
 		}
 		return NewRequestyEmbedder(opts...)
 
+	case "voyage":
+		opts := []VoyageOption{
+			WithVoyageModel(cfg.Embedder.Model),
+			WithVoyageKey(cfg.Embedder.APIKey),
+			WithVoyageEndpoint(cfg.Embedder.Endpoint),
+		}
+		if cfg.Embedder.Dimensions != nil {
+			opts = append(opts, WithVoyageDimensions(*cfg.Embedder.Dimensions))
+		}
+		if timeout > 0 {
+			opts = append(opts, WithVoyageTimeout(timeout))
+		}
+		if cfg.Embedder.MaxRetries > 0 {
+			opts = append(opts, WithVoyageMaxRetries(cfg.Embedder.MaxRetries))
+		}
+		return NewVoyageEmbedder(opts...)
+
 	default:
 		return nil, fmt.Errorf("unknown embedding provider: %s", cfg.Embedder.Provider)
 	}

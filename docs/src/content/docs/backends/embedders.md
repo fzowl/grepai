@@ -1,6 +1,6 @@
 ---
 title: Embedders
-description: Choose and configure the embedding provider grepai uses to turn code into vectors (Ollama, LM Studio, OpenAI, Synthetic, OpenRouter, Requesty).
+description: Choose and configure the embedding provider grepai uses to turn code into vectors (Ollama, LM Studio, OpenAI, Synthetic, OpenRouter, Requesty, Voyage AI).
 ---
 
 An embedder turns each code chunk (and each search query) into a vector. This page helps you pick a provider and shows the configuration for each one.
@@ -15,12 +15,14 @@ An embedder turns each code chunk (and each search query) into a vector. This pa
 | `synthetic` | Cloud | `hf:nomic-ai/nomic-embed-text-v1.5` | 768 | `SYNTHETIC_API_KEY` |
 | `openrouter` | Cloud | `openai/text-embedding-3-small` | 1536 | `OPENROUTER_API_KEY` |
 | `requesty` | Cloud | `openai/text-embedding-3-small` | 1536 | `REQUESTY_API_KEY` |
+| `voyage` | Cloud | none: `model` is required | 1024 | `VOYAGE_API_KEY` |
 
 How to choose:
 
 - **Keep code on your machine:** use `ollama` or `lmstudio`.
 - **Large repository on a cloud API:** consider `openai`. It is the only provider that sends batches in parallel and retries on rate limits.
 - **One key for many models:** use `openrouter` or `requesty`.
+- **Code-specific or long-context embeddings:** use `voyage` (for example `voyage-code-4`).
 
 Pick the provider during `grepai init`, or pass it directly:
 
@@ -32,20 +34,20 @@ All providers share the same `embedder` keys in `.grepai/config.yaml`:
 
 | Key | Used by | Description |
 |-----|---------|-------------|
-| `provider` | all | `ollama`, `lmstudio`, `openai`, `synthetic`, `openrouter` or `requesty` |
-| `model` | all | Model name exactly as the provider expects it |
+| `provider` | all | `ollama`, `lmstudio`, `openai`, `synthetic`, `openrouter`, `requesty` or `voyage` |
+| `model` | all (required for `voyage`) | Model name exactly as the provider expects it |
 | `endpoint` | all | Base URL of the API (each provider has a default) |
 | `api_key` | cloud providers | API key. If empty, grepai reads the provider's environment variable, but only when `endpoint` is the provider's official endpoint. A custom endpoint requires `api_key` |
 | `dimensions` | all | Vector size. See [Changing Embedding Models](#changing-embedding-models) |
 | `request_timeout_seconds` | all except `requesty` | HTTP timeout per request. Default: 60 (90 for `synthetic`) |
 | `parallelism` | `openai` | Concurrent requests. Default: 4 |
-| `max_retries` | `openai` | Retries on HTTP 429 and 5xx. Default: 5 |
+| `max_retries` | `openai`, `voyage` | Retries on HTTP 429 and 5xx. Default: 5 |
 | `max_batch_size` | `openai` | Maximum inputs per request. Default: 2000 |
 | `max_batch_tokens` | `openai` | Maximum estimated tokens per request. Default: 280000 |
 
 > **Note:** grepai does not expand environment variables in `config.yaml`. A value like `api_key: ${OPENAI_API_KEY}` is sent as that literal text. To use an environment variable, leave `api_key` out and export the variable.
 
-> **Custom endpoints need `api_key`:** grepai sends a key read from the environment (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `SYNTHETIC_API_KEY`, `REQUESTY_API_KEY`) only to the provider's official host over HTTPS: `api.openai.com`, `openrouter.ai`, `api.synthetic.new` or `router.requesty.ai`. A `.grepai/config.yaml` can come with a cloned repository, so its `endpoint` is not trusted with your environment keys. For any other endpoint (Azure, LiteLLM, vLLM, a proxy…), set `api_key` in the config. If you leave it empty while an environment key is set, grepai stops with an error that names the endpoint instead of sending the key. With the `openai` provider, a local server that needs no key (vLLM, TEI…) still needs a placeholder, for example `api_key: unused`: grepai refuses to start without a key.
+> **Custom endpoints need `api_key`:** grepai sends a key read from the environment (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `SYNTHETIC_API_KEY`, `REQUESTY_API_KEY`, `VOYAGE_API_KEY`) only to the provider's official host over HTTPS: `api.openai.com`, `openrouter.ai`, `api.synthetic.new`, `router.requesty.ai` or `api.voyageai.com`. A `.grepai/config.yaml` can come with a cloned repository, so its `endpoint` is not trusted with your environment keys. For any other endpoint (Azure, LiteLLM, vLLM, a proxy…), set `api_key` in the config. If you leave it empty while an environment key is set, grepai stops with an error that names the endpoint instead of sending the key. With the `openai` provider, a local server that needs no key (vLLM, TEI…) still needs a placeholder, for example `api_key: unused`: grepai refuses to start without a key.
 
 ## Ollama (Local)
 
@@ -357,6 +359,38 @@ embedder:
 - If `api_key` and `REQUESTY_API_KEY` are both empty, grepai falls back to `OPENAI_API_KEY`.
 - The request timeout is fixed at 60 seconds (`request_timeout_seconds` is ignored).
 
+## Voyage AI (Cloud)
+
+[Voyage AI](https://www.voyageai.com) offers embedding models trained for retrieval, including code-specific ones. Unlike the other providers, `voyage` has **no default model**: you must set `model`, and grepai stops with an error if it is missing or not in the table below.
+
+```bash
+export VOYAGE_API_KEY=your-key
+grepai init --provider voyage --model voyage-code-4
+```
+
+```yaml
+embedder:
+  provider: voyage
+  model: voyage-code-4
+  endpoint: https://api.voyageai.com/v1
+  # dimensions: 512   # optional, only for models that support it
+```
+
+| Model | Context | `dimensions` |
+|-------|---------|--------------|
+| `voyage-4-large`, `voyage-4`, `voyage-4-lite`, `voyage-code-4` | 32K | 1024 (default), 256, 512, 2048 |
+| `voyage-3-large`, `voyage-3.5`, `voyage-3.5-lite`, `voyage-code-3` | 32K | 1024 (default), 256, 512, 2048 |
+| `voyage-finance-2` | 32K | 1024 only |
+| `voyage-law-2` | 16K | 1024 only |
+| `voyage-context-4`, `voyage-context-3` | 32K per chunk | 1024 (default), 256, 512, 2048 |
+
+- Leave `dimensions` unset to use the model's native size (1024). grepai only sends `output_dimension` when you set `dimensions`, and rejects values the model does not support. Changing it means rebuilding the index.
+- Search queries are embedded with `input_type: query` and indexed chunks with `input_type: document`.
+- The `voyage-context-*` models use the contextualized embeddings endpoint. grepai sends each chunk as one document with auto-chunking enabled (`chunk_size` 32000) and queries as a single query list. Each grepai chunk therefore gets its own vector, as with the other models: chunks of one file are not embedded together.
+- Requests are split to respect the 1000-input limit and the model's per-request token cap. `voyage-code-4` documents no token cap, so grepai applies none and halves a batch the API rejects as too large.
+- `max_retries` and `request_timeout_seconds` apply. Errors show the `detail` message of the Voyage API.
+- Reranking and multimodal models are not used by grepai.
+
 ## Changing Embedding Models
 
 You can use any embedding model your provider offers. Two keys matter:
@@ -366,7 +400,7 @@ You can use any embedding model your provider offers. Two keys matter:
 | `model` | The exact model name the provider expects |
 | `dimensions` | The size of the vectors the model produces |
 
-When `dimensions` is unset, grepai assumes 768 for `ollama`, `lmstudio` and `synthetic`, and 1536 for `openai`, `openrouter` and `requesty` (3072 or 4096 for the models listed above). PostgreSQL and Qdrant use this value to size the vector column or collection, so it must match the model.
+When `dimensions` is unset, grepai assumes 768 for `ollama`, `lmstudio` and `synthetic`,, 1024 for `voyage`, and 1536 for `openai`, `openrouter` and `requesty` (3072 or 4096 for the models listed above). PostgreSQL and Qdrant use this value to size the vector column or collection, so it must match the model.
 
 ### Finding Model Dimensions
 

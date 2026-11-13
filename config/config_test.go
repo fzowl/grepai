@@ -878,3 +878,34 @@ func TestConfigLoad_EmbedderBatchLimits(t *testing.T) {
 		t.Fatalf("default config should not write batch limit keys, got:\n%s", data)
 	}
 }
+
+func TestDefaultEmbedderForProvider_VoyageHasNoDefaultModel(t *testing.T) {
+	voyage := DefaultEmbedderForProvider("voyage")
+	if voyage.Model != "" {
+		t.Fatalf("voyage must not have a default model, got %q", voyage.Model)
+	}
+	if voyage.Endpoint != DefaultVoyageEndpoint || voyage.Dimensions != nil {
+		t.Fatalf("unexpected voyage defaults: %+v", voyage)
+	}
+	if got := voyage.GetDimensions(); got != DefaultVoyageDimensions {
+		t.Fatalf("voyage GetDimensions() = %d, want %d", got, DefaultVoyageDimensions)
+	}
+}
+
+func TestConfigLoad_VoyageKeepsModelEmptyWhenUnset(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(GetConfigDir(dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	yaml := "version: 1\nembedder:\n  provider: voyage\n"
+	if err := os.WriteFile(GetConfigPath(dir), []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Embedder.Model != "" || cfg.Embedder.Endpoint != DefaultVoyageEndpoint || cfg.Embedder.Dimensions != nil {
+		t.Fatalf("unexpected voyage config after defaults: %+v", cfg.Embedder)
+	}
+}

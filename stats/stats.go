@@ -50,6 +50,7 @@ var cloudProviders = map[string]bool{
 	"openrouter": true,
 	"requesty":   true,
 	"synthetic":  true,
+	"voyage":     true,
 }
 
 // IsCloudProvider returns true when the given provider name has a token cost.

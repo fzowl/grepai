@@ -11,7 +11,7 @@ export const intro = () => {
 > grepai is an open-source (MIT) command-line tool for semantic code search and call graph tracing. It indexes what code means with vector embeddings, so developers and AI coding agents (Claude Code, Cursor, Codex, Windsurf, Gemini CLI, OpenCode) can find code by describing it in natural language, then see who calls it.
 
 - Single Go binary for macOS, Linux and Windows${version ? `, latest release v${version}` : ''}.
-- Embeddings run locally with Ollama (default model nomic-embed-text) or LM Studio, or through OpenAI, OpenRouter, Synthetic and Requesty.
+- Embeddings run locally with Ollama (default model nomic-embed-text) or LM Studio, or through OpenAI, OpenRouter, Synthetic, Requesty and Voyage AI.
 - Index storage: local GOB file (default), PostgreSQL with pgvector, or Qdrant.
 - Main commands: \`grepai init\`, \`grepai watch\` (live index), \`grepai index\` (one-shot), \`grepai search\`, \`grepai trace callers|callees|graph\`, \`grepai refs readers|writers|graph\`, \`grepai rpg search|fetch|explore\`, \`grepai stats\`, \`grepai mcp-serve\` (MCP server), \`grepai workspace\` (multi-project).
 - Source code: https://github.com/yoanbernabeu/grepai

@@ -35,7 +35,7 @@ var initCmd = &cobra.Command{
 This command will:
 - Create .grepai/config.yaml with default settings
 - Prompt for the embedding provider (ollama, lmstudio, openai, synthetic,
-  openrouter or requesty) and the storage backend (gob, postgres or qdrant)
+  openrouter, requesty or voyage) and the storage backend (gob, postgres or qdrant)
 - Add .grepai/ to .gitignore if present
 
 Use --provider, --model and --backend to skip those prompts, or --yes to
@@ -44,8 +44,8 @@ accept the defaults (ollama with nomic-embed-text, gob).`,
 }
 
 func init() {
-	initCmd.Flags().StringVarP(&initProvider, "provider", "p", "", "Embedding provider (ollama, lmstudio, openai, synthetic, openrouter, or requesty)")
-	initCmd.Flags().StringVarP(&initModel, "model", "m", "", "Embedding model (default depends on the provider: nomic-embed-text for ollama, text-embedding-3-small for openai; openrouter also accepts text-embedding-3-large and qwen3-embedding-8b)")
+	initCmd.Flags().StringVarP(&initProvider, "provider", "p", "", "Embedding provider (ollama, lmstudio, openai, synthetic, openrouter, requesty, or voyage)")
+	initCmd.Flags().StringVarP(&initModel, "model", "m", "", "Embedding model (default depends on the provider: nomic-embed-text for ollama, text-embedding-3-small for openai; openrouter also accepts text-embedding-3-large and qwen3-embedding-8b; voyage has no default, the model is required)")
 	initCmd.Flags().StringVarP(&initBackend, "backend", "b", "", "Storage backend (gob, postgres, or qdrant)")
 	initCmd.Flags().BoolVar(&initNonInteractive, "yes", false, "Use defaults without prompting")
 	initCmd.Flags().BoolVar(&initInherit, "inherit", false, "Inherit configuration from main worktree (for git worktrees)")
@@ -129,6 +129,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 			fmt.Println("  4) synthetic (cloud, free embedding API)")
 			fmt.Println("  5) openrouter (cloud, multi-provider gateway)")
 			fmt.Println("  6) requesty (cloud, multi-provider gateway)")
+			fmt.Println("  7) voyage (cloud, requires API key and an explicit model)")
 			fmt.Print("Choice [1]: ")
 
 			input, _ := reader.ReadString('\n')
@@ -187,6 +188,22 @@ func runInit(cmd *cobra.Command, args []string) error {
 				cfg.Embedder.Endpoint = "https://router.requesty.ai/v1"
 				cfg.Embedder.Model = "openai/text-embedding-3-small"
 				// Requesty: leave Dimensions nil to use model's native dimensions
+			case "7", "voyage":
+				cfg.Embedder.Provider = "voyage"
+				cfg.Embedder.Endpoint = config.DefaultVoyageEndpoint
+				cfg.Embedder.Dimensions = nil
+				model := strings.TrimSpace(initModel)
+				if model == "" {
+					fmt.Println("\nVoyage has no default model. Available models:")
+					fmt.Printf("  %s\n", strings.Join(embedder.VoyageModelNames(), ", "))
+					fmt.Print("Model (required): ")
+					model, _ = reader.ReadString('\n')
+				}
+				model, err := resolveVoyageInitModel(model)
+				if err != nil {
+					return err
+				}
+				cfg.Embedder.Model = model
 			default:
 				cfg.Embedder.Provider = "ollama"
 				fmt.Print("Ollama endpoint [http://localhost:11434]: ")
@@ -225,6 +242,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 				cfg.Embedder.Model = resolveInitModel(initProvider, initModel)
 				cfg.Embedder.Endpoint = "https://router.requesty.ai/v1"
 				// Requesty: leave Dimensions nil to use model's native dimensions
+			case "voyage":
+				model, err := resolveVoyageInitModel(initModel)
+				if err != nil {
+					return err
+				}
+				cfg.Embedder.Model = model
+				cfg.Embedder.Endpoint = config.DefaultVoyageEndpoint
+				cfg.Embedder.Dimensions = nil
 			}
 		}
 
@@ -318,6 +343,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 				cfg.Embedder.Endpoint = "https://router.requesty.ai/v1"
 				cfg.Embedder.Dimensions = nil
 				cfg.Embedder.Model = resolveInitModel(initProvider, initModel)
+			case "voyage":
+				model, err := resolveVoyageInitModel(initModel)
+				if err != nil {
+					return err
+				}
+				cfg.Embedder.Model = model
+				cfg.Embedder.Endpoint = config.DefaultVoyageEndpoint
+				cfg.Embedder.Dimensions = nil
 			}
 		}
 		if initBackend != "" {
@@ -360,7 +393,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		fmt.Println("\nMake sure LM Studio is running with an embedding model loaded.")
 		fmt.Printf("  Model: %s\n", cfg.Embedder.Model)
 		fmt.Printf("  Endpoint: %s\n", cfg.Embedder.Endpoint)
-	case "openai", "synthetic", "openrouter", "requesty":
+	case "openai", "synthetic", "openrouter", "requesty", "voyage":
 		if cfg.Embedder.APIKey == "" && !embedder.UsesOfficialEndpoint(cfg.Embedder.Provider, cfg.Embedder.Endpoint) {
 			fmt.Printf("\n%s is a custom endpoint: environment API keys are only sent to the\n", embedder.RedactEndpoint(cfg.Embedder.Endpoint))
 			fmt.Printf("official endpoint. Set embedder.api_key in %s.\n", config.GetConfigPath(cwd))
@@ -395,7 +428,25 @@ func printCloudKeyHint(provider string) {
 	case "requesty":
 		fmt.Println("\nMake sure REQUESTY_API_KEY or OPENAI_API_KEY is set in your environment.")
 		fmt.Println("  Get your API key at: https://app.requesty.ai/api-keys")
+	case "voyage":
+		fmt.Println("\nMake sure VOYAGE_API_KEY is set in your environment.")
+		fmt.Println("  Get your API key at: https://dash.voyageai.com/api-keys")
 	}
+}
+
+// resolveVoyageInitModel validates the model chosen for the voyage provider.
+// There is no default: an empty or unknown model is an error.
+func resolveVoyageInitModel(requestedModel string) (string, error) {
+	model := strings.TrimSpace(requestedModel)
+	if model == "" {
+		return "", fmt.Errorf("the voyage provider has no default model: pass --model with one of %s", strings.Join(embedder.VoyageModelNames(), ", "))
+	}
+	for _, name := range embedder.VoyageModelNames() {
+		if name == model {
+			return model, nil
+		}
+	}
+	return "", fmt.Errorf("unknown voyage model %q: supported models are %s", model, strings.Join(embedder.VoyageModelNames(), ", "))
 }
 
 func shouldPromptInheritChoice(shouldInherit, nonInteractive, uiMode bool) bool {

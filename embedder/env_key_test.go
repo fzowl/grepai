@@ -233,6 +233,9 @@ func TestUsesOfficialEndpoint(t *testing.T) {
 		{"synthetic", "https://api.synthetic.new/openai/v1", true},
 		{"openrouter", "https://openrouter.ai/api/v1", true},
 		{"requesty", "http://localhost:8080/v1", false},
+		{"voyage", "", true},
+		{"voyage", "https://api.voyageai.com/v1", true},
+		{"voyage", "https://proxy.example/v1", false},
 		{"ollama", "http://localhost:11434", false},
 	}
 	for _, tt := range tests {

@@ -21,7 +21,7 @@ grepai needs an embedding provider to turn code into vectors. Pick one:
 
 - **Ollama** (default, local): free, and your code stays on your machine. See [Install Ollama](#install-ollama-recommended) below.
 - **LM Studio** (local): uses the OpenAI-compatible server built into LM Studio.
-- **A cloud API**: OpenAI, OpenRouter, Synthetic or Requesty. You need an API key.
+- **A cloud API**: OpenAI, OpenRouter, Synthetic, Requesty or Voyage AI. You need an API key.
 
 See [Embedders](/grepai/backends/embedders/) for details on each provider.
 

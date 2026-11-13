@@ -99,6 +99,7 @@ func registerCompletions() {
 			"synthetic\tCloud embedding with Synthetic (free)",
 			"openrouter	Cloud multi-provider gateway",
 			"requesty	Cloud multi-provider gateway",
+			"voyage	Cloud embedding with Voyage AI (requires --model)",
 		}, cobra.ShellCompDirectiveNoFileComp
 	})
 	_ = initCmd.RegisterFlagCompletionFunc("backend", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

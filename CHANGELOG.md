@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Voyage AI Provider**: add Voyage AI (`voyage`) as an embedding provider. Models are named explicitly and there is no default: set `embedder.model` to one of `voyage-4-large`, `voyage-4`, `voyage-4-lite`, `voyage-code-4`, `voyage-3-large`, `voyage-3.5`, `voyage-3.5-lite`, `voyage-code-3`, `voyage-finance-2`, `voyage-law-2`, `voyage-context-4` or `voyage-context-3`. The API key comes from `VOYAGE_API_KEY` and is only sent to `api.voyageai.com`. `embedder.dimensions` selects a Matryoshka size where the model supports it. Existing configs and indexes are unaffected.
+
 ## [1.2.0] - 2026-10-30
 
 This release only contains fixes, but two of them change behavior: read the **Security** migration if you use a custom embedding endpoint with an API key from the environment, and the Qdrant entry if you set `store.qdrant.collection`.

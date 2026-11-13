@@ -37,11 +37,13 @@ const (
 	DefaultSyntheticEndpoint  = "https://api.synthetic.new/openai/v1"
 	DefaultOpenRouterEndpoint = "https://openrouter.ai/api/v1"
 	DefaultRequestyEndpoint   = "https://router.requesty.ai/v1"
+	DefaultVoyageEndpoint     = "https://api.voyageai.com/v1"
 
 	DefaultLocalEmbeddingDimensions = 768
 	DefaultOpenAIDimensions         = 1536
 	DefaultOpenAILargeDimensions    = 3072
 	DefaultQwen8BDimensions         = 4096
+	DefaultVoyageDimensions         = 1024
 	DefaultOpenAIParallelism        = 4
 
 	DefaultPostgresDSN    = "postgres://localhost:5432/grepai"
@@ -104,7 +106,7 @@ type BoostRule struct {
 }
 
 type EmbedderConfig struct {
-	Provider    string `yaml:"provider"` // ollama | lmstudio | openai | synthetic | openrouter | requesty
+	Provider    string `yaml:"provider"` // ollama | lmstudio | openai | synthetic | openrouter | requesty | voyage
 	Model       string `yaml:"model"`
 	Endpoint    string `yaml:"endpoint,omitempty"`
 	APIKey      string `yaml:"api_key,omitempty"`
@@ -119,7 +121,7 @@ type EmbedderConfig struct {
 	// MaxRetries caps the number of retry attempts for transient embedding
 	// failures (HTTP 429 / 5xx). 0 (the default) preserves the historical
 	// value of 5. Only consumed by providers that implement retry today
-	// (openai); other providers ignore it.
+	// (openai, voyage); other providers ignore it.
 	MaxRetries int `yaml:"max_retries,omitempty"`
 	// MaxBatchSize caps the number of inputs sent in one embedding request.
 	// 0 (the default) keeps the OpenAI limit of 2000. Lower it for
@@ -140,6 +142,8 @@ func (e *EmbedderConfig) GetDimensions() int {
 		return *e.Dimensions
 	}
 	switch e.Provider {
+	case "voyage":
+		return DefaultVoyageDimensions
 	case "openai", "openrouter", "requesty":
 		switch strings.TrimSpace(e.Model) {
 		case OpenAIEmbeddingModelLarge, OpenRouterEmbeddingModelLarge:
@@ -189,6 +193,12 @@ func DefaultEmbedderForProvider(provider string) EmbedderConfig {
 			Model:      DefaultRequestyEmbeddingModel,
 			Endpoint:   DefaultRequestyEndpoint,
 			Dimensions: nil,
+		}
+	case "voyage":
+		// No default model: embedder.model must be set explicitly.
+		return EmbedderConfig{
+			Provider: "voyage",
+			Endpoint: DefaultVoyageEndpoint,
 		}
 	case "lmstudio":
 		dim := DefaultLocalEmbeddingDimensions

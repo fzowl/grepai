@@ -35,14 +35,14 @@ This is the file that `grepai init --yes` generates, shortened and annotated. Ke
 version: 1
 
 embedder:
-  provider: ollama              # ollama | lmstudio | openai | openrouter | synthetic | requesty
+  provider: ollama              # ollama | lmstudio | openai | openrouter | synthetic | requesty | voyage
   model: nomic-embed-text
   endpoint: http://localhost:11434
   dimensions: 768               # vector size; see "Embedder Options"
   # api_key: ""                 # cloud providers; prefer an environment variable
   # parallelism: 4              # concurrent requests (openai only), default 4
   # request_timeout_seconds: 60 # HTTP timeout per request; default 60 (90 for synthetic), ignored by requesty
-  # max_retries: 5              # retries on HTTP 429/5xx (openai only)
+  # max_retries: 5              # retries on HTTP 429/5xx (openai and voyage)
   # max_batch_size: 2000        # inputs per request (openai only)
   # max_batch_tokens: 280000    # estimated tokens per request (openai only)
 
@@ -161,6 +161,7 @@ The embedder turns code chunks and queries into vectors. If you do not set `endp
 | `openrouter` | `openai/text-embedding-3-small` | `https://openrouter.ai/api/v1` | model's native size | `OPENROUTER_API_KEY`, then `OPENAI_API_KEY` |
 | `synthetic` | `hf:nomic-ai/nomic-embed-text-v1.5` | `https://api.synthetic.new/openai/v1` | 768 | `SYNTHETIC_API_KEY`, then `OPENAI_API_KEY` |
 | `requesty` | `openai/text-embedding-3-small` | `https://router.requesty.ai/v1` | model's native size | `REQUESTY_API_KEY`, then `OPENAI_API_KEY` |
+| `voyage` | none, `model` is required | `https://api.voyageai.com/v1` | 1024 | `VOYAGE_API_KEY` |
 
 For `openai`, `openrouter` and `requesty`, leave `dimensions` unset to use the model's native size: 1536 for `text-embedding-3-small`, 3072 for `text-embedding-3-large`, 4096 for `qwen/qwen3-embedding-8b`. For local providers, set `dimensions` yourself when you use a model other than the default.
 
@@ -426,12 +427,13 @@ grepai does **not** expand variables inside `config.yaml`. A value such as `api_
 | `openrouter` | `OPENROUTER_API_KEY`, `OPENAI_API_KEY` |
 | `synthetic` | `SYNTHETIC_API_KEY`, `OPENAI_API_KEY` |
 | `requesty` | `REQUESTY_API_KEY`, `OPENAI_API_KEY` |
+| `voyage` | `VOYAGE_API_KEY` |
 
 ```bash
 export OPENAI_API_KEY="sk-..."
 grepai watch
 ```
 
-These variables are only used when `endpoint` is the provider's official endpoint (`api.openai.com`, `openrouter.ai`, `api.synthetic.new`, `router.requesty.ai`, over HTTPS). With a custom endpoint, set `api_key` in the config: grepai refuses to send an environment key to it and stops with an error.
+These variables are only used when `endpoint` is the provider's official endpoint (`api.openai.com`, `openrouter.ai`, `api.synthetic.new`, `router.requesty.ai`, `api.voyageai.com`, over HTTPS). With a custom endpoint, set `api_key` in the config: grepai refuses to send an environment key to it and stops with an error.
 
 An `api_key` set in `config.yaml` takes precedence over the environment. Other settings, such as the provider or the backend, cannot be overridden with environment variables: edit `config.yaml` instead.

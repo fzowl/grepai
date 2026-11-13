@@ -112,3 +112,14 @@ func TestResolveInitModel_LocalProviders(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveVoyageInitModel(t *testing.T) {
+	if got, err := resolveVoyageInitModel("  voyage-code-4 "); err != nil || got != "voyage-code-4" {
+		t.Errorf("resolveVoyageInitModel(voyage-code-4) = %q, %v", got, err)
+	}
+	for _, bad := range []string{"", "   ", "text-embedding-3-small", "voyage-nope"} {
+		if got, err := resolveVoyageInitModel(bad); err == nil {
+			t.Errorf("resolveVoyageInitModel(%q) = %q, want an error: voyage has no default model", bad, got)
+		}
+	}
+}

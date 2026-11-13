@@ -52,6 +52,8 @@ func UsesOfficialEndpoint(provider, endpoint string) bool {
 		official = defaultSyntheticEndpoint + defaultSyntheticPath
 	case "requesty":
 		official = defaultRequestyEndpoint
+	case "voyage":
+		official = defaultVoyageEndpoint
 	default:
 		return false
 	}
